@@ -1,50 +1,21 @@
-name: CattlePRO Milk AI Auto-Run
-
+name: Build APK
 on: [push]
 
 jobs:
-  ejecucion:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-22.04
     steps:
-      - name: Descargar mi codigo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Instalar Python
-        uses: actions/setup-python@v4
+      - name: Build with Buildozer
+        uses: ArtemSerebriakov/buildozer-action@v1
         with:
-          python-version: '3.10'
+          buildozer_version: master
+          command: buildozer android debug
+          repository_root: .
 
-      - name: Instalar dependencias de Sistema y Kivy
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            python3-pip \
-            build-essential \
-            git \
-            python3-dev \
-            ffmpeg \
-            libsdl2-dev \
-            libsdl2-image-dev \
-            libsdl2-mixer-dev \
-            libsdl2-ttf-dev \
-            libportmidi-dev \
-            libswscale-dev \
-            libavformat-dev \
-            libavcodec-dev \
-            zlib1g-dev \
-            libgstreamer1.0-dev \
-            gstreamer1.0-plugins-base \
-            gstreamer1.0-plugins-good
-          
-          pip install --upgrade pip
-          pip install kivy[base] kivy_examples
-
-      - name: Verificar Sintaxis (Compilación)
-        run: python -m py_compile main.py
-
-      - name: Simular Ejecución
-        run: |
-          export KIVY_NO_ARGS=1
-          export KIVY_NO_CONSOLELOG=1
-          # Usamos un comando para verificar que importe bien sin abrir ventana
-          python -c "from kivy.app import App; print('Kivy cargado exitosamente')"
+      - name: Subir APK generado
+        uses: actions/upload-artifact@v4
+        with:
+          name: CattlePRO-Android-App
+          path: bin/*.apk
