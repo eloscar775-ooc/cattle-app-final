@@ -1,89 +1,69 @@
-name: Build APK
+name: 🐄 RanchoPRO — Build Android APK
+
 on:
   push:
-    branches: [ main ]
+    branches: [ master, main ]
   workflow_dispatch:
+
 jobs:
-  build:
+  build-apk:
+    name: Compilar APK
     runs-on: ubuntu-22.04
+
     steps:
-      - uses: actions/checkout@v4
-      
-      # 1. Preparar Python 3.9
-      - name: Set up Python
+      - name: 📥 Descargar codigo
+        uses: actions/checkout@v4
+
+      - name: ☕ Configurar Java 17 (CRÍTICO)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 🐍 Configurar Python 3.10
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
-      
-      # 2. Instalar dependencias del sistema
-      - name: Install System Dependencies
+          python-version: "3.10"
+
+      - name: 🛠️ Instalar dependencias del sistema
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libssl-dev libffi-dev python3-dev
-          sudo apt-get install -y libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev
-          sudo apt-get install -y zlib1g-dev openjdk-17-jdk unzip autoconf libtool pkg-config
-      
-      # 3. Instalar Buildozer
-      - name: Install Buildozer
+          sudo apt-get install -y -f libunwind-dev
+          sudo apt-get install -y \
+            build-essential git ffmpeg libgstreamer1.0-dev \
+            gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+            libffi-dev libssl-dev python3-setuptools \
+            autoconf automake libtool pkg-config zlib1g-dev \
+            libncurses5-dev libgdbm-dev libnss3-dev \
+            libsqlite3-dev libreadline-dev tk-dev libbz2-dev \
+            liblzma-dev libopenjp2-7-dev libtiff5-dev \
+            libjpeg-dev libfreetype6-dev liblcms2-dev \
+            libwebp-dev tcl8.6-dev tk8.6-dev libharfbuzz-dev \
+            libfribidi-dev libxcb1-dev
+
+      - name: 📦 Instalar Buildozer y Cython estable
         run: |
           pip install --upgrade pip
-          pip install buildozer cython
-      
-      # 4. Instalación manual del SDK
-      - name: Install Android SDK Manually
+          pip install --upgrade "Cython<3.0" buildozer
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: 🚀 COMPILAR APK
         run: |
-          export SDK_DIR=$HOME/.buildozer/android/platform/android-sdk
-          mkdir -p $SDK_DIR
+          # Eliminar compilaciones rotas anteriores
+          rm -rf .buildozer/
           
-          echo "Descargando Android Command Line Tools..."
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+          # Crear carpeta bin por si acaso
+          mkdir -p bin
           
-          unzip -q cmdline-tools.zip
-          mkdir -p $SDK_DIR/cmdline-tools
-          mv cmdline-tools $SDK_DIR/cmdline-tools/latest
-          rm cmdline-tools.zip
-          
-          mkdir -p $SDK_DIR/licenses
-          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $SDK_DIR/licenses/android-sdk-license
-          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $SDK_DIR/licenses/android-sdk-license
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" >> $SDK_DIR/licenses/android-sdk-license
-          echo "84831b9409646a918e30573bab4c9c91346d8abd" > $SDK_DIR/licenses/android-sdk-preview-license
-          
-          echo "SDK Instalado en $SDK_DIR"
-      
-      # 5. Configurar Buildozer Spec CORREGIDO
-      - name: Configure Buildozer Spec
-        run: |
-          if [ ! -f buildozer.spec ]; then buildozer init; fi
-          
-          # APIs estables
-          sed -i 's/android.api = .*/android.api = 33/' buildozer.spec
-          sed -i 's/android.minapi = .*/android.minapi = 21/' buildozer.spec
-          sed -i 's/android.ndk = .*/android.ndk = 25b/' buildozer.spec
-          sed -i 's/android.accept_sdk_license = .*/android.accept_sdk_license = True/' buildozer.spec
-          
-          # CORRECCIÓN CRÍTICA: Requirements correctos para Android
-          sed -i 's/requirements = .*/requirements = python3,kivy==2.1.0,android,pyjnius/' buildozer.spec
-          
-          # Permisos necesarios
-          sed -i 's/android.permissions = .*/android.permissions = WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE/' buildozer.spec
-          
-          # Orientación vertical
-          sed -i 's/orientation = .*/orientation = portrait/' buildozer.spec
-          
-          echo "Buildozer.spec configurado correctamente"
-          cat buildozer.spec
-      
-      # 6. Compilar
-      - name: Build with Buildozer
-        env:
-          ANDROIDSDK: /home/runner/.buildozer/android/platform/android-sdk
-        run: |
-          yes | buildozer android debug
-      
-      # 7. Subir APK
-      - name: Upload APK
+          # EJECUCIÓN: Aceptamos licencias y compilamos
+          # Usamos la ruta directa de Java 17 para que Gradle no se confunda
+          export JAVA_HOME=$JAVA_HOME_17_X64
+          yes | buildozer -v android debug
+        continue-on-error: false
+
+      - name: 📤 Subir APK generado
         uses: actions/upload-artifact@v4
         with:
-          name: ganaderiapr-apk
+          name: RanchoPRO-Android-v3
           path: bin/*.apk
+          if-no-files-found: error
