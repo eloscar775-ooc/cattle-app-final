@@ -1,0 +1,24 @@
+name: CattlePRO Milk AI Auto-Run
+
+on: [push] # Se activa cada vez que subas cambios
+
+jobs:
+  ejecucion:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar mi codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Instalar Librerias
+        run: |
+          pip install --upgrade pip
+          # Si usas pandas o numpy, quita el '#' de abajo para instalarlos:
+          # pip install pandas numpy
+
+      - name: Ejecutar CattlePRO
+        run: python main.py
